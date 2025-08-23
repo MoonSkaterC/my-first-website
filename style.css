@@ -27,6 +27,12 @@ font-size: 17px;
   color: black;
 }
 
+/* Add a color to the active/current link */
+.topnav a.active {
+  background-color: #04AA6D;
+  color: white;
+}
+
 h1 {
   color: #2c3e50;
 }
