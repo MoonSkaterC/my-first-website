@@ -60,13 +60,8 @@ border-bottom: 3px solid transparent;
 h1 {
   color: #2c3e50;
 }
-.msl {
-   background-color: lightgrey !important;
-    width: 300px !important;
-    border: 15px solid green !important;
-    padding: 50px !important;
-    margin: 20px !important;
-}
+.msl {border-style: ridge;}
+   
 p {
   color: #34495e;
   font-size: 18px;
