@@ -5,6 +5,12 @@ body {
   padding: 50px 50px 50px 50px;  /* top, right, bottom, left */
   /* padding: 20px; */
 }
+/* Black background color for the top navigation */
+.topnav {
+background-color: #333;
+overflow: hidden;
+}
+
 
 h1 {
   color: #2c3e50;
