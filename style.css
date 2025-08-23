@@ -61,11 +61,11 @@ h1 {
   color: #2c3e50;
 }
 .msl {
-  background-color: lightgrey;
-  width: 300px;
-  border: 15px solid green;
-  padding: 50px;
-  margin: 20px;
+   background-color: lightgrey !important;
+    width: 300px !important;
+    border: 15px solid green !important;
+    padding: 50px !important;
+    margin: 20px !important;
 }
 p {
   color: #34495e;
