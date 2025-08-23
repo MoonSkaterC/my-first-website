@@ -33,6 +33,16 @@ font-size: 17px;
   color: white;
 }
 
+/* Style the Search box */
+.topnav input[type=text] {
+  float: right;
+  padding: 6px;
+  border: none;
+  margin-top: 8px;
+  margin-right: 16px;
+  font-size: 17px;
+}
+
 h1 {
   color: #2c3e50;
 }
@@ -54,7 +64,7 @@ ul {
   color: green;
   font-size: 16px;
 }
-
+/*
 a {
   color: #e74c3c;
   text-decoration: none;
@@ -63,4 +73,4 @@ a {
 a:hover {
   text-decoration: underline;
 }
-
+*/
