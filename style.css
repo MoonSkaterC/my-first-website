@@ -7,6 +7,9 @@ body {
 }
 /* Black background color for the top navigation */
 .topnav {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
 background-color: black;
 overflow: hidden;
 }
