@@ -13,7 +13,7 @@ overflow: hidden;
 
 /* Style the links inside the navigation bar  */
 .topnav a {
-  float: center;
+  float: left;
   color: white;
   text-align: left;
   padding: 14px 50px:
