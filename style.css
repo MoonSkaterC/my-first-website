@@ -60,7 +60,7 @@ border-bottom: 3px solid transparent;
 h1 {
   color: #2c3e50;
 }
-.msl {border-style: ridge;}
+.msl {border-style: solid;}
   
  .round3 {
    border: 2px solid black;
