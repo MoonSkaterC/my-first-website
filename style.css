@@ -47,7 +47,9 @@ border-bottom: 3px solid transparent;
   padding: 6px;
   border: none;
   margin-top: 8px;
+  margin-right: 10px;
   font-size: 17px;
+  width: 200px;
 }
 
 @media screen and (max-width: 500px) {
