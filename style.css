@@ -70,9 +70,7 @@ h1 {
 }
   
  .round3 {
-   border: 2px solid black;
-   border-radius: 12px;
-   padding: 5px;
+   border-style: solid;
    background-color: rgb(176, 224, 230, 0.5);
  }
   
