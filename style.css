@@ -43,7 +43,7 @@ border-bottom: 3px solid transparent;
 
 /* Style the Search box */
 .topnav input[type=text] {
-  float: right;
+  float: center;
   padding: 6px;
   border: none;
   margin-top: 8px;
