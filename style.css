@@ -91,7 +91,9 @@ form {
 
 h1 {
   color: #2c3e50;
+  font-family: "Audiowide", sans-serif;
 }
+
 .msl {
   border-style: solid;
   background-color: rgb(176, 224, 230, 0.5);
