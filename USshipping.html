@@ -1,1 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shipping Form</title>
+</head>
+<body>
+    <h2>Send Product Details for US Shipping</h2>
+    <form action="/submit" method="POST" enctype="multipart/form-data">
+        <label>Product Name:</label><br>
+        <input type="text" name="product_name" required><br><br>
 
+        <label>Quantity:</label><br>
+        <input type="number" name="quantity" min="1" required><br><br>
+
+        <label>Shipping Address (US only):</label><br>
+        <textarea name="shipping_address" rows="4" cols="40" required></textarea><br><br>
+
+        <label>Upload Invoice (PDF or Image):</label><br>
+        <input type="file" name="invoice" accept=".pdf,.jpg,.jpeg,.png" required><br><br>
+
+        <input type="submit" value="Submit">
+    </form>
