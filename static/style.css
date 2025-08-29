@@ -1,1 +1,158 @@
+body {
+  background-color: Moccasin;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  /* padding: 20px 20px 20px 20px; */  /* top, right, bottom, left */
+  /* padding: 20px; */
+}
+/* Black background color for the top navigation */
+.topnav {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+background-color: black;
+overflow: hidden;
+}
 
+/* Style the links inside the navigation bar  */
+.topnav a {
+  float: left;
+  color: white;
+  text-align: center;
+  padding: 14px 16px;
+text-decoration: none;
+font-size: 25px;
+width: 25%;
+border-bottom: 3px solid transparent;
+}
+
+.topnav a:hover {
+  background-color: #000;
+  border-bottom: 3px solid green;
+}
+
+.topnav a.active {
+  background-color: #04AA6D;
+  border-bottom: 3px solid green;
+}
+
+
+.topnav .search-container {
+  float: right;
+}
+
+/* Style the Search box */
+.topnav input[type=text] {
+  float: center;
+  padding: 6px;
+  border: none;
+  margin-top: 8px;
+  margin-right: 10px;
+  font-size: 17px;
+  width: 200px;
+}
+
+form {
+      max-width: 500px;
+      margin: auto;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      margin-bottom: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+
+@media screen and (max-width: 500px) {
+  .navbar a {
+    float: none;
+    display: block;
+    width: 100%;
+    text-align: left;
+  }
+}
+
+h1 {
+  color: #2c3e50;
+  font-family: "Audiowide", sans-serif;
+}
+
+.msl {
+  border-style: solid;
+  background-color: rgb(176, 224, 230, 0.5);
+}
+  
+ .round3 {
+   border-style: solid;
+   background-color: rgb(176, 224, 230, 0.5);
+ }
+  
+p {
+  color: #34495e;
+  font-size: 18px;
+}
+
+img {
+  border-radius: 50%;
+  width: 200px;
+  height: 200px;
+  margin: 10px 0;
+}
+
+ul {
+  list-style-type: square;
+  color: green;
+  font-size: 16px;
+}
+
+/* ========== TDCHECK RESULT BOX ========== */
+.result-box {
+  margin-top: 30px;
+  background: #eef;
+  padding: 20px;
+  border-radius: 6px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+}
+
+.error {
+  color: red;
+  font-weight: bold;
+}
+
+.highlight {
+  color: #006600;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+
+/*
+a {
+  color: #e74c3c;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+*/
