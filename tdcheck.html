@@ -1,1 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tariff & Duty Checker</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='tdcheck.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>Tariff & Duty Checker</h1>
+
+    <form method="POST">
+      <label for="hs_code">HS Code:</label>
+      <input type="text" name="hs_code" required>
+
+      <label for="destination">Destination Country (e.g. US, EU):</label>
+      <input type="text" name="destination" required>
+
+      <label for="value">Product Value (USD):</label>
+      <input type="number" name="value" step="0.01" required>
+
+      <button type="submit">Check Duties</button>
+    </form>
+
+    {% if result %}
+      <div class="result-box">
+        {% if result.error %}
+          <p class="error">{{ result.error }}</p>
+        {% else %}
+          <h3>Duty Breakdown:</h3>
+          <ul>
+            <li>HS Code: {{ result.hs_code }}</li>
+            <li>Destination: {{ result.destination }}</li>
+            <li>Product Value: {{ result.value }}</li>
+            <li>Tariff Rate: {{ result.rate }}</li>
+            <li>Duties: {{ result.duty }}</li>
+            <li><strong>Total Payable: {{ result.total }}</strong></li>
+          </ul>
+          <p class="highlight">{{ result.message }}</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>
 
