@@ -146,6 +146,46 @@ ul {
 }
 
 
+/* ================================
+   EXTRA STYLES FOR CONTRACT HELPER
+   ================================ */
+
+/* Make sure textarea stands out for pasting contracts */
+#contractText {
+  width: 100%;
+  height: 150px;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+/* Style the analyze button separately */
+#analyzeBtn {
+  padding: 10px 20px;
+  font-size: 16px;
+  margin-bottom: 15px;
+  cursor: pointer;
+}
+
+/* Remove default bullets for results list */
+#results {
+  list-style-type: none;
+  padding: 0;
+}
+
+/* Style each result item */
+#results li {
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  cursor: pointer; /* makes it clear it's clickable */
+  color: white;    /* so text is readable on colored backgrounds */
+}
+
+/* Color codes for different levels of importance */
+.green { background: #2e7d32; }   /* ✅ General Info */
+.orange { background: #ef6c00; }  /* ⚠️ Important */
+.red { background: #c62828; }     /* ❌ High Risk */
+
 /*
 a {
   color: #e74c3c;
