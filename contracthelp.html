@@ -1,1 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Contract Helper</title>
+
+  <!-- Import font and site-wide styles -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Audiowide">
+  <link rel="stylesheet" href="style.css"> <!-- your main site CSS -->
+  <link rel="stylesheet" href="contracthelp.css"> <!-- specific styles for this page -->
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <!-- Site title -->
+  <h1><u>MoonSkater Labs 2025</u></h1>
+
+  <!-- Navigation bar (new link added for Contract Helper) -->
+  <div class="topnav">
+    <a href="index.html">Home</a>
+    <a href="aboutus.html">About Us</a>
+    <a href="USshipping.html">Shipping Form</a>
+    <a href="tdcheck.html">Tariff & Duty tracker</a>
+    <a href="contactus.html">Contact Us</a>
+    <a class="active" href="contracthelp.html">Contract Helper</a> <!-- new page link -->
+    <input type="text" placeholder="Search..">
+  </div>
+
+  <!-- Page heading -->
+  <h2>Contract Helper</h2>
+  <p>Paste your contract below, click Analyze, and see key points highlighted:</p>
+
+  <!-- Text area for user to paste their contract -->
+  <textarea id="contractText" placeholder="Paste contract text here..."></textarea>
+  <br>
+
+  <!-- Button to trigger analysis -->
+  <button id="analyzeBtn">Analyze</button>
+
+  <!-- Results will be shown here as a list -->
+  <ul id="results"></ul>
+
+  <!-- Load JavaScript file -->
+  <script src="contracthelp.js"></script>
+</body>
+</html>
 
