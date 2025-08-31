@@ -2,28 +2,63 @@
 // CONTRACT HELPER JAVASCRIPT
 // ==========================
 
-// When the "Analyze" button is clicked, run analyzeContract()
+// --- PDF IMPORT FEATURE ---
+document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (file && file.type === "application/pdf") {
+    const fileReader = new FileReader();
+
+    fileReader.onload = function() {
+      const typedarray = new Uint8Array(this.result);
+
+      pdfjsLib.getDocument(typedarray).promise.then(async function(pdf) {
+        let textContent = "";
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const text = await page.getTextContent();
+          const pageText = text.items.map(item => item.str).join(" ");
+          textContent += pageText + "\n\n";
+        }
+
+        // Put extracted text into textarea
+        document.getElementById('contractText').value = textContent;
+
+        // ✅ Automatically run analysis
+        analyzeContract();
+      });
+    };
+
+    fileReader.readAsArrayBuffer(file);
+  } else {
+    alert("Please upload a valid PDF file.");
+  }
+}
+
+// --- ANALYSIS FEATURE ---
 document.getElementById('analyzeBtn').addEventListener('click', analyzeContract);
 
 function analyzeContract() {
-  // Get the contract text from the textarea
-  const text = document.getElementById('contractText').value;
-
-  // Reference to the results <ul>
+  const text = document.getElementById('contractText').value.trim();
   const results = document.getElementById('results');
-  results.innerHTML = ''; // Clear old results
+  results.innerHTML = '';
 
-  // --- STEP 1: Break contract into sentences and show as "info" ---
-  // This gives a simple breakdown so user doesn’t face a giant block of text
-  const sentences = text.split(/(?<=[.!?])\s+/); // split by punctuation
+  if (!text) {
+    alert("Please paste text or upload a PDF before analyzing.");
+    return;
+  }
+
+  // Split text into sentences
+  const sentences = text.split(/(?<=[.!?])\s+/);
   sentences.forEach(s => {
     if (s.trim().length > 0) {
-      addResult('✅ Info: ' + s, 'green'); // each sentence is added as "info"
+      addResult('✅ Info: ' + s, 'green');
     }
   });
 
-  // --- STEP 2: Look for hidden or risky clauses ---
-  // Each regex checks if certain keywords exist in the text
+  // Clause detection
   const clauses = [
     [/early termination|cancellation fee/i, 
       '❌ High Risk: Check for fees if you end the contract early.', 'red'],
@@ -39,7 +74,6 @@ function analyzeContract() {
       '⚠️ Important: You might be required to buy extra insurance.', 'orange']
   ];
 
-  // Go through each clause pattern and check against the contract text
   clauses.forEach(([regex, msg, color]) => {
     if (regex.test(text)) {
       addResult(msg, color);
@@ -47,20 +81,18 @@ function analyzeContract() {
   });
 }
 
-// --- Helper function to create results ---
+// --- Helper: Add result line ---
 function addResult(msg, color) {
   const li = document.createElement('li');
   li.textContent = msg;
   li.className = color;
 
-  // Add click-to-speak functionality for accessibility (e.g. dyslexia support)
+  // Click to read aloud
   li.onclick = () => {
     const utter = new SpeechSynthesisUtterance(msg);
-    utter.rate = 0.9; // slightly slower speed for clarity
+    utter.rate = 0.9;
     speechSynthesis.speak(utter);
   };
 
-  // Add this item to the results list
   document.getElementById('results').appendChild(li);
 }
-
