@@ -1,109 +1,116 @@
 // ==========================
-// CONTRACT HELPER JAVASCRIPT
+// CONTRACT HELPER JAVASCRIPT (KEY POINTS ONLY)
 // ==========================
 
 // --- PDF IMPORT FEATURE ---
-// Attach an event listener to the file input so that when a PDF is chosen, handleFileUpload runs
+// This allows the user to upload a PDF file and extract its text
 document.getElementById('fileInput').addEventListener('change', handleFileUpload);
 
 function handleFileUpload(event) {
-  const file = event.target.files[0]; // Get the uploaded file
-  if (file && file.type === "application/pdf") { // Check if it's a PDF
+  const file = event.target.files[0];
+
+  // ✅ Check file type (only accept PDFs)
+  if (file && file.type === "application/pdf") {
     const fileReader = new FileReader();
 
     fileReader.onload = function() {
-      const typedarray = new Uint8Array(this.result); // Convert to byte array
+      const typedarray = new Uint8Array(this.result);
 
-      // Use PDF.js to read the PDF
+      // Use PDF.js library to read the PDF file
       pdfjsLib.getDocument(typedarray).promise.then(async function(pdf) {
         let textContent = "";
 
-        // Loop through all pages of the PDF
+        // Loop through all pages in the PDF
         for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);                // Get page
-          const text = await page.getTextContent();         // Extract text
-          const pageText = text.items.map(item => item.str).join(" "); // Join text
-          textContent += pageText + "\n\n";                 // Add to total
+          const page = await pdf.getPage(i);
+          const text = await page.getTextContent();
+
+          // Combine all words into sentences
+          const pageText = text.items.map(item => item.str).join(" ");
+          textContent += pageText + "\n\n";
         }
 
-        // Put extracted text into the textarea
+        // Put extracted text into the hidden textarea (for analysis use)
         document.getElementById('contractText').value = textContent;
 
-        // ✅ Automatically analyze the contract after loading the PDF
+        // ✅ Run analysis immediately after upload
         analyzeContract();
       });
     };
 
-    // Read PDF as array buffer
+    // Read the PDF file as binary data
     fileReader.readAsArrayBuffer(file);
   } else {
-    alert("Please upload a valid PDF file."); // Error if not PDF
+    alert("Please upload a valid PDF file.");
   }
 }
 
 // --- ANALYSIS FEATURE ---
-// Run analysis when "Analyze" button is clicked
+// This scans the contract text and looks for key clauses (not every sentence!)
 document.getElementById('analyzeBtn').addEventListener('click', analyzeContract);
 
 function analyzeContract() {
-  const text = document.getElementById('contractText').value.trim(); // Get text from textarea
-  const results = document.getElementById('results'); // Results list
-  results.innerHTML = ''; // Clear previous results
+  const text = document.getElementById('contractText').value.trim();
+  const results = document.getElementById('results');
+  results.innerHTML = ''; // Clear old results
 
-  // If no text is present
   if (!text) {
     alert("Please paste text or upload a PDF before analyzing.");
     return;
   }
 
-  // Split text into sentences for easier reading
-  const sentences = text.split(/(?<=[.!?])\s+/);
-  sentences.forEach(s => {
-    if (s.trim().length > 0) {
-      // Add each sentence as general "info"
-      addResult('✅ Info: ' + s, 'green');
-    }
-  });
-
-  // --- CLAUSE DETECTION ---
-  // List of patterns to check in the contract text
+  // --- CLAUSE DETECTION RULES ---
+  // Each rule looks for certain keywords and explains them in simple English
   const clauses = [
     [/early termination|cancellation fee/i, 
-      '❌ High Risk: Check for fees if you end the contract early.', 'red'],
+      '❌ High Risk: You may have to pay fees if you end the contract early.', 'red'],
     [/balloon payment|final payment/i, 
-      '❌ High Risk: There may be a large payment at the end.', 'red'],
+      '❌ High Risk: There may be a large final payment at the end.', 'red'],
     [/variable interest|APR may change/i, 
-      '⚠️ Important: Your interest rate could go up.', 'orange'],
+      '⚠️ Important: Interest rate could increase during the contract.', 'orange'],
     [/repossession|take back vehicle/i, 
-      '❌ High Risk: They can take the car if you miss payments.', 'red'],
+      '❌ High Risk: Lender can repossess the car if payments are missed.', 'red'],
     [/penalty|late fee/i, 
-      '⚠️ Important: Extra costs if you miss or delay payments.', 'orange'],
+      '⚠️ Important: Extra costs apply if payments are late.', 'orange'],
     [/mandatory insurance|GAP insurance/i, 
-      '⚠️ Important: You might be required to buy extra insurance.', 'orange']
+      '⚠️ Important: You may be required to buy extra insurance.', 'orange'],
+    [/mileage limit|excess mileage/i,
+      '⚠️ Important: Extra charges may apply if you drive over the set mileage.', 'orange'],
+    [/maintenance|servicing/i,
+      '⚠️ Important: You may be responsible for maintenance/servicing.', 'orange']
   ];
 
-  // Check each regex pattern against the text
+  let foundSomething = false;
+
+  // Check each clause against the contract text
   clauses.forEach(([regex, msg, color]) => {
     if (regex.test(text)) {
-      addResult(msg, color); // If matched, add to results list
+      addResult(msg, color); // Show warning/info
+      foundSomething = true;
     }
   });
+
+  // If no risky/important clauses were found
+  if (!foundSomething) {
+    addResult("✅ No obvious high-risk clauses were detected. Please still review carefully.", "green");
+  }
 }
 
-// --- Helper Function: Add result to the list ---
+// --- Helper Function: Add result line to the screen ---
 function addResult(msg, color) {
-  const li = document.createElement('li'); // Create a list item
-  li.textContent = msg;                    // Insert message
-  li.className = color;                    // Add color class (red, orange, green)
+  const li = document.createElement('li');
+  li.textContent = msg;
+  li.className = color; // Add CSS class (red, orange, green)
 
-  // Make the list item clickable to read aloud
+  // 🗣 Click on result to hear it read aloud (for accessibility)
   li.onclick = () => {
-    const utter = new SpeechSynthesisUtterance(msg); // Create speech object
-    utter.rate = 0.9;                                // Set speaking speed
-    speechSynthesis.speak(utter);                    // Speak text
+    const utter = new SpeechSynthesisUtterance(msg);
+    utter.rate = 0.9; // Slightly slower for clarity
+    speechSynthesis.speak(utter);
   };
 
-  // Add the list item to the results <ul>
+  // Add the result item to the results list
   document.getElementById('results').appendChild(li);
 }
 
+ 
