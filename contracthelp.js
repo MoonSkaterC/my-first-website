@@ -1,17 +1,18 @@
 // ==========================
-// CONTRACT HELPER JAVASCRIPT (KEY POINTS ONLY)
+// CONTRACT KEY POINTS ANALYZER
 // ==========================
 
 // --- PDF IMPORT FEATURE ---
-// This allows the user to upload a PDF file and extract its text
 document.getElementById('fileInput').addEventListener('change', handleFileUpload);
 
 function handleFileUpload(event) {
   const file = event.target.files[0];
 
-  // ✅ Check file type (only accept PDFs)
   if (file && file.type === "application/pdf") {
     const fileReader = new FileReader();
+    
+    // Show loading indicator
+    document.getElementById('results').innerHTML = '<li class="loading">📄 Extracting text from PDF...</li>';
 
     fileReader.onload = function() {
       const typedarray = new Uint8Array(this.result);
@@ -20,97 +21,203 @@ function handleFileUpload(event) {
       pdfjsLib.getDocument(typedarray).promise.then(async function(pdf) {
         let textContent = "";
 
-        // Loop through all pages in the PDF
+        // Extract text from all pages
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const text = await page.getTextContent();
-
-          // Combine all words into sentences
           const pageText = text.items.map(item => item.str).join(" ");
           textContent += pageText + "\n\n";
         }
 
-        // Put extracted text into the hidden textarea (for analysis use)
+        // Put extracted text into the textarea
         document.getElementById('contractText').value = textContent;
-
-        // ✅ Run analysis immediately after upload
-        analyzeContract();
+        
+        // Automatically analyze the contract
+        analyzeContractKeyPoints();
+      }).catch(function(error) {
+        document.getElementById('results').innerHTML = '<li class="red">❌ Error reading PDF: ' + error.message + '</li>';
       });
     };
 
-    // Read the PDF file as binary data
     fileReader.readAsArrayBuffer(file);
   } else {
     alert("Please upload a valid PDF file.");
   }
 }
 
-// --- ANALYSIS FEATURE ---
-// This scans the contract text and looks for key clauses (not every sentence!)
-document.getElementById('analyzeBtn').addEventListener('click', analyzeContract);
+// --- MANUAL ANALYSIS TRIGGER ---
+document.getElementById('analyzeBtn').addEventListener('click', analyzeContractKeyPoints);
 
-function analyzeContract() {
+// --- KEY POINTS ANALYSIS ---
+function analyzeContractKeyPoints() {
   const text = document.getElementById('contractText').value.trim();
   const results = document.getElementById('results');
-  results.innerHTML = ''; // Clear old results
+  results.innerHTML = '';
 
   if (!text) {
-    alert("Please paste text or upload a PDF before analyzing.");
+    alert("Please paste contract text or upload a PDF before analyzing.");
     return;
   }
 
-  // --- CLAUSE DETECTION RULES ---
-  // Each rule looks for certain keywords and explains them in simple English
-  const clauses = [
-    [/early termination|cancellation fee/i, 
-      '❌ High Risk: You may have to pay fees if you end the contract early.', 'red'],
-    [/balloon payment|final payment/i, 
-      '❌ High Risk: There may be a large final payment at the end.', 'red'],
-    [/variable interest|APR may change/i, 
-      '⚠️ Important: Interest rate could increase during the contract.', 'orange'],
-    [/repossession|take back vehicle/i, 
-      '❌ High Risk: Lender can repossess the car if payments are missed.', 'red'],
-    [/penalty|late fee/i, 
-      '⚠️ Important: Extra costs apply if payments are late.', 'orange'],
-    [/mandatory insurance|GAP insurance/i, 
-      '⚠️ Important: You may be required to buy extra insurance.', 'orange'],
-    [/mileage limit|excess mileage/i,
-      '⚠️ Important: Extra charges may apply if you drive over the set mileage.', 'orange'],
-    [/maintenance|servicing/i,
-      '⚠️ Important: You may be responsible for maintenance/servicing.', 'orange']
-  ];
+  // Show analyzing message
+  results.innerHTML = '<li class="loading">🔍 Analyzing contract for key points...</li>';
+  
+  setTimeout(() => {
+    results.innerHTML = ''; // Clear loading message
+    
+    // --- KEY CONTRACT ELEMENTS TO EXTRACT ---
+    const keyPointChecks = [
+      // Financial Terms
+      {
+        patterns: [/total.{0,20}(?:cost|price|amount).{0,50}\$?\d+(?:,\d{3})*(?:\.\d{2})?/gi],
+        label: "💰 Total Cost",
+        type: "info"
+      },
+      {
+        patterns: [/monthly.{0,20}payment.{0,50}\$?\d+(?:,\d{3})*(?:\.\d{2})?/gi, /\$?\d+(?:,\d{3})*(?:\.\d{2})?.{0,20}per month/gi],
+        label: "💳 Monthly Payment",
+        type: "info"
+      },
+      {
+        patterns: [/interest.{0,20}rate.{0,50}\d+(?:\.\d+)?%?/gi, /APR.{0,50}\d+(?:\.\d+)?%/gi],
+        label: "📈 Interest Rate",
+        type: "warning"
+      },
+      
+      // Timeline & Duration
+      {
+        patterns: [/term.{0,20}(?:of|is).{0,50}\d+.{0,20}(?:years?|months?)/gi, /contract.{0,20}period.{0,50}\d+.{0,20}(?:years?|months?)/gi],
+        label: "📅 Contract Duration",
+        type: "info"
+      },
+      {
+        patterns: [/(?:expires?|expiration).{0,50}\d{1,2}\/\d{1,2}\/\d{2,4}/gi, /valid.{0,20}until.{0,50}\d{1,2}\/\d{1,2}\/\d{2,4}/gi],
+        label: "⏰ Expiration Date",
+        type: "info"
+      },
+      
+      // Penalties & Fees
+      {
+        patterns: [/early.{0,20}termination.{0,50}fee.{0,50}\$?\d+/gi, /cancellation.{0,50}penalty.{0,50}\$?\d+/gi],
+        label: "⚠️ Early Termination Fee",
+        type: "risk"
+      },
+      {
+        patterns: [/late.{0,20}fee.{0,50}\$?\d+/gi, /penalty.{0,50}\$?\d+/gi],
+        label: "⚠️ Late Fees",
+        type: "risk"
+      },
+      
+      // Important Clauses
+      {
+        patterns: [/balloon.{0,20}payment/gi, /final.{0,20}payment.{0,50}\$?\d+/gi],
+        label: "🎈 Balloon Payment",
+        type: "risk"
+      },
+      {
+        patterns: [/automatic.{0,20}renewal/gi, /auto.{0,20}renew/gi],
+        label: "🔄 Auto-Renewal Clause",
+        type: "warning"
+      },
+      {
+        patterns: [/arbitration/gi, /dispute.{0,50}arbitration/gi],
+        label: "⚖️ Arbitration Clause",
+        type: "warning"
+      },
+      
+      // Rights & Responsibilities
+      {
+        patterns: [/warranty.{0,50}(?:void|excluded|limited)/gi, /no.{0,20}warranty/gi],
+        label: "🚫 Limited/No Warranty",
+        type: "risk"
+      },
+      {
+        patterns: [/liability.{0,50}limited/gi, /not.{0,20}liable/gi],
+        label: "🛡️ Limited Liability",
+        type: "warning"
+      }
+    ];
 
-  let foundSomething = false;
+    let foundPoints = [];
 
-  // Check each clause against the contract text
-  clauses.forEach(([regex, msg, color]) => {
-    if (regex.test(text)) {
-      addResult(msg, color); // Show warning/info
-      foundSomething = true;
+    // Check each pattern against the contract text
+    keyPointChecks.forEach(check => {
+      check.patterns.forEach(pattern => {
+        const matches = text.match(pattern);
+        if (matches) {
+          matches.forEach(match => {
+            foundPoints.push({
+              label: check.label,
+              text: match.trim(),
+              type: check.type
+            });
+          });
+        }
+      });
+    });
+
+    // Remove duplicates
+    foundPoints = foundPoints.filter((point, index, self) => 
+      index === self.findIndex(p => p.label === point.label && p.text === point.text)
+    );
+
+    // Display results
+    if (foundPoints.length === 0) {
+      addResult("📋 No specific key points detected. Please review contract manually.", "info");
+    } else {
+      addResult(`📋 Found ${foundPoints.length} key contract points:`, "info");
+      
+      foundPoints.forEach(point => {
+        addDetailedResult(point.label, point.text, point.type);
+      });
     }
-  });
 
-  // If no risky/important clauses were found
-  if (!foundSomething) {
-    addResult("✅ No obvious high-risk clauses were detected. Please still review carefully.", "green");
-  }
+    // Add general advice
+    addResult("💡 Tip: Always read the full contract and consider legal advice for important agreements.", "info");
+  }, 1000); // Small delay for better UX
 }
 
-// --- Helper Function: Add result line to the screen ---
-function addResult(msg, color) {
+// --- Helper Functions ---
+function addResult(msg, type) {
   const li = document.createElement('li');
   li.textContent = msg;
-  li.className = color; // Add CSS class (red, orange, green)
-
-  // 🗣 Click on result to hear it read aloud (for accessibility)
+  li.className = type;
+  
+  // Click to hear result read aloud
   li.onclick = () => {
     const utter = new SpeechSynthesisUtterance(msg);
-    utter.rate = 0.9; // Slightly slower for clarity
+    utter.rate = 0.9;
     speechSynthesis.speak(utter);
   };
-
-  // Add the result item to the results list
+  
   document.getElementById('results').appendChild(li);
 }
 
- 
+function addDetailedResult(label, extractedText, type) {
+  const li = document.createElement('li');
+  li.className = type + ' detailed';
+  
+  // Create expandable result
+  li.innerHTML = `
+    <strong>${label}</strong>
+    <div class="extracted-text" style="font-size: 0.9em; margin-top: 5px; padding: 8px; background: rgba(0,0,0,0.05); border-radius: 4px;">
+      "${extractedText}"
+    </div>
+  `;
+  
+  // Click to hear result read aloud
+  li.onclick = () => {
+    const utter = new SpeechSynthesisUtterance(label + ": " + extractedText);
+    utter.rate = 0.8;
+    speechSynthesis.speak(utter);
+  };
+  
+  document.getElementById('results').appendChild(li);
+}
+
+// --- CLEAR FUNCTION ---
+function clearAnalysis() {
+  document.getElementById('contractText').value = '';
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('fileInput').value = '';
+}
