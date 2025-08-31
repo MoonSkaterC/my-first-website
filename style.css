@@ -5,13 +5,14 @@ body {
   /* padding: 20px 20px 20px 20px; */  /* top, right, bottom, left */
   /* padding: 20px; */
 }
+
 /* Black background color for the top navigation */
 .topnav {
   list-style-type: none;
   margin: 0;
   padding: 0;
-background-color: black;
-overflow: hidden;
+  background-color: black;
+  overflow: hidden;
 }
 
 /* Style the links inside the navigation bar  */
@@ -20,10 +21,10 @@ overflow: hidden;
   color: white;
   text-align: center;
   padding: 14px 16px;
-text-decoration: none;
-font-size: 25px;
-width: 25%;
-border-bottom: 3px solid transparent;
+  text-decoration: none;
+  font-size: 25px;
+  width: 25%;
+  border-bottom: 3px solid transparent;
 }
 
 .topnav a:hover {
@@ -35,7 +36,6 @@ border-bottom: 3px solid transparent;
   background-color: #04AA6D;
   border-bottom: 3px solid green;
 }
-
 
 .topnav .search-container {
   float: right;
@@ -53,32 +53,31 @@ border-bottom: 3px solid transparent;
 }
 
 form {
-      max-width: 500px;
-      margin: auto;
-    }
+  max-width: 500px;
+  margin: auto;
+}
 
-    input, textarea {
-      width: 100%;
-      padding: 10px;
-      margin-top: 8px;
-      margin-bottom: 16px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
+input, textarea {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
 
-    button {
-      background-color: #4CAF50;
-      color: white;
-      padding: 10px 15px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
+button {
+  background-color: #4CAF50;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
 
-    button:hover {
-      background-color: #45a049;
-    }
-
+button:hover {
+  background-color: #45a049;
+}
 
 @media screen and (max-width: 500px) {
   .navbar a {
@@ -99,10 +98,10 @@ h1 {
   background-color: rgb(176, 224, 230, 0.5);
 }
   
- .round3 {
-   border-style: solid;
-   background-color: rgb(176, 224, 230, 0.5);
- }
+.round3 {
+  border-style: solid;
+  background-color: rgb(176, 224, 230, 0.5);
+}
   
 p {
   color: #34495e;
@@ -145,14 +144,122 @@ ul {
   margin-top: 10px;
 }
 
-
-/*
-a {
-  color: #e74c3c;
-  text-decoration: none;
+/* ========== CONTRACT ANALYZER CLASSES ========== */
+.info {
+  color: #0066cc;
+  background-color: rgba(0, 102, 204, 0.1);
+  border-left: 4px solid #0066cc;
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 4px;
 }
 
-a:hover {
-  text-decoration: underline;
+.warning {
+  color: #ff6600;
+  background-color: rgba(255, 102, 0, 0.1);
+  border-left: 4px solid #ff6600;
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 4px;
 }
-*/
+
+.risk {
+  color: #cc0000;
+  background-color: rgba(204, 0, 0, 0.1);
+  border-left: 4px solid #cc0000;
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.loading {
+  color: #666;
+  font-style: italic;
+  padding: 10px;
+  background-color: rgba(102, 102, 102, 0.1);
+  border-radius: 4px;
+  animation: pulse 1.5s infinite;
+}
+
+.detailed {
+  margin: 10px 0;
+  padding: 15px;
+  border-left: 3px solid;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.detailed:hover {
+  transform: translateX(5px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.extracted-text {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  border: 1px dashed #ccc;
+  font-style: italic;
+}
+
+/* ========== ANIMATIONS ========== */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+/* ========== CONTRACT ANALYZER CONTAINER ========== */
+.contract-analyzer {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  text-align: left;
+}
+
+.file-upload-area {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  background: #f9f9f9;
+  transition: border-color 0.3s ease;
+}
+
+.file-upload-area:hover {
+  border-color: #0066cc;
+  background: #f0f8ff;
+}
+
+.file-upload-area input[type="file"] {
+  margin: 10px 0;
+}
+
+/* ========== RESULTS STYLING ========== */
+#results {
+  list-style: none;
+  padding: 0;
+  margin-top: 20px;
+}
+
+#results li {
+  margin: 10px 0;
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#results li:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
