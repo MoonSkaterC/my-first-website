@@ -12,18 +12,17 @@ tariff_database = {
 @app.route('/TDcheck', methods=['GET', 'POST'])
 def td_check():
     result = None
-
     if request.method == 'POST':
         hs_code = request.form['hs_code']
         destination = request.form['destination'].upper()
+        
         try:
             value = float(request.form['value'])
         except ValueError:
             result = {'error': 'Invalid value for product.'}
             return render_template('tdcheck.html', result=result)
-
+        
         rate = tariff_database.get(hs_code, {}).get(destination)
-
         if rate is None:
             result = {'error': f"No tariff data found for HS code {hs_code} to {destination}"}
         else:
@@ -36,11 +35,10 @@ def td_check():
                 'rate': f"{rate}%",
                 'duty': f"${duty:.2f}",
                 'total': f"${total:.2f}",
-                'message': f"Customer must pay {duty:.2f} in tariffs/duties."
+                'message': f"Customer must pay ${duty:.2f} in tariffs/duties."
             }
-
+    
     return render_template('tdcheck.html', result=result)
 
 if __name__ == '__main__':
     app.run(debug=True)
-
