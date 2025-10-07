@@ -334,6 +334,7 @@
       const totalPages = pdf.numPages;
       
       updateProgress(0, totalPages);
+      console.log(`PDF has ${totalPages} pages`);
       
       for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
         // Only process EVEN pages
@@ -342,6 +343,7 @@
           continue;
         }
         
+        console.log(`\n=== Processing Page ${pageNum} ===`);
         const page = await pdf.getPage(pageNum);
         
         // Extract text in both spaced and dense variants
@@ -350,26 +352,35 @@
         const spacedText = items.map(it => it.str).join(' ');
         const denseText = items.map(it => it.str).join('');
         
+        console.log('Spaced text:', spacedText.substring(0, 200));
+        console.log('Dense text:', denseText.substring(0, 200));
+        
         let text = spacedText;
         if (!text || text.trim().length < 10) text = denseText;
         
         // If still not enough text, try OCR
         if (!text || text.trim().length < 10) {
+          console.log('No text found, trying OCR...');
           text = await performOCR(page);
+          console.log('OCR result:', text.substring(0, 200));
         }
         
         // Extract from both variants to catch all possibilities
+        const beforeCount = trackingNumbers.length;
         extractFromText(spacedText);
         extractFromText(denseText);
         if (text !== spacedText && text !== denseText) {
           extractFromText(text);
         }
+        const afterCount = trackingNumbers.length;
+        console.log(`Found ${afterCount - beforeCount} tracking numbers on page ${pageNum}`);
         
         updateProgress(pageNum, totalPages);
       }
       
       // Remove duplicates
       trackingNumbers = [...new Set(trackingNumbers)];
+      console.log(`Total unique tracking numbers: ${trackingNumbers.length}`);
       
       progress.style.display = 'none';
       processBtn.disabled = false;
@@ -378,7 +389,7 @@
         displayResults();
         showStatus(`✓ Successfully found ${trackingNumbers.length} tracking number(s)!`, 'success');
       } else {
-        showStatus('❌ No tracking numbers found on even pages. Make sure your PDF contains tracking numbers starting with "1Z".', 'error');
+        showStatus('❌ No tracking numbers found on even pages. Check browser console (F12) for debug info.', 'error');
       }
     }
 
@@ -406,16 +417,22 @@
     function extractFromText(text) {
       if (!text) return;
       
-      // Match "1Z" followed by 16 alphanumerics, allowing spaces/dashes between
-      // Examples: "1Z9999999999999999", "1Z 999 999 99 9999 9999", "1Z G01 00E 04 2439 8682"
-      const pattern = /1Z(?:[\s-]*[A-Z0-9O]){16}/gi;
+      // Match "1Z" followed by 16 characters (letters and numbers), allowing spaces/dashes between
+      // This will match: "1Z G01 00E 04 2439 8682" where letters like E, G, O are part of the tracking number
+      const pattern = /1Z[\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9][\s-]*[A-Z0-9]/gi;
       const matches = text.match(pattern) || [];
       
       for (const raw of matches) {
-        const normalized = raw
+        let normalized = raw
           .replace(/[\s-]/g, '')  // Remove spaces and dashes
-          .toUpperCase()
-          .replace(/O/g, '0');    // OCR fix: O → 0
+          .toUpperCase();
+        
+        // Only replace standalone O that looks like zero (not part of letters like "00E")
+        // Keep letters like E, G, etc. that are part of the tracking number
+        // But fix common OCR mistakes where 0 becomes O in number sequences
+        normalized = normalized.replace(/([0-9])O([0-9])/g, '$100$2'); // O between numbers -> 0
+        normalized = normalized.replace(/^1ZO/g, '1Z0'); // O right after 1Z -> 0
+        normalized = normalized.replace(/O([0-9]{4})$/g, '0$1'); // O before last 4 digits -> 0
         
         // Only keep valid 18-character tracking numbers
         if (normalized.length === 18 && normalized.startsWith('1Z')) {
