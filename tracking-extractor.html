@@ -343,24 +343,27 @@
         }
         
         const page = await pdf.getPage(pageNum);
-
-// Try to extract text first, using both spaced and dense variants
-const textContent = await page.getTextContent();
-const items = textContent.items || [];
-const spacedText = items.map(it => it.str).join(' ');
-const denseText  = items.map(it => it.str).join('');
-
-let text = spacedText;
-if (!text || text.trim().length < 10) text = denseText;
-
-// If still not enough, try OCR
-if (!text || text.trim().length < 10) {
-  text = await performOCR(page);
-}
-
-// Extract tracking numbers from both variants
-extractFromText(spacedText);
-extractFromText(denseText);
+        
+        // Extract text in both spaced and dense variants
+        const textContent = await page.getTextContent();
+        const items = textContent.items || [];
+        const spacedText = items.map(it => it.str).join(' ');
+        const denseText = items.map(it => it.str).join('');
+        
+        let text = spacedText;
+        if (!text || text.trim().length < 10) text = denseText;
+        
+        // If still not enough text, try OCR
+        if (!text || text.trim().length < 10) {
+          text = await performOCR(page);
+        }
+        
+        // Extract from both variants to catch all possibilities
+        extractFromText(spacedText);
+        extractFromText(denseText);
+        if (text !== spacedText && text !== denseText) {
+          extractFromText(text);
+        }
         
         updateProgress(pageNum, totalPages);
       }
@@ -380,45 +383,46 @@ extractFromText(denseText);
     }
 
     async function performOCR(page) {
-  try {
-    const viewport = page.getViewport({ scale: 2.0 });
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
-
-    await page.render({ canvasContext: context, viewport }).promise;
-
-    const imageData = canvas.toDataURL('image/png');
-    const result = await Tesseract.recognize(imageData, 'eng', {
-      tessedit_char_whitelist: '1Z0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ- ',
-    });
-    return result.data.text || '';
-  } catch (error) {
-    console.error('OCR failed:', error);
-    return '';
-  }
-}
-
-function extractFromText(text) {
-  if (!text) return;
-
-  // Match "1Z" followed by 16 alphanumerics, allowing spaces/dashes between
-  // Examples: "1Z9999999999999999", "1Z 999 999 99 9999 9999", "1Z G01 00E 04 2439 8682"
-  const pattern = /1Z(?:[\s-]*[A-Z0-9O]){16}/gi;
-  const matches = text.match(pattern) || [];
-
-  for (const raw of matches) {
-    const normalized = raw
-      .replace(/[\s-]/g, '')
-      .toUpperCase()
-      .replace(/O/g, '0'); // OCR fix: O→0
-
-    if (normalized.length === 18) {
-      trackingNumbers.push(normalized);
+      try {
+        const viewport = page.getViewport({ scale: 2.0 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        await page.render({ canvasContext: context, viewport }).promise;
+        
+        const imageData = canvas.toDataURL('image/png');
+        const result = await Tesseract.recognize(imageData, 'eng', {
+          tessedit_char_whitelist: '1Z0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ- ',
+        });
+        return result.data.text || '';
+      } catch (error) {
+        console.error('OCR failed:', error);
+        return '';
+      }
     }
-  }
-}
+
+    function extractFromText(text) {
+      if (!text) return;
+      
+      // Match "1Z" followed by 16 alphanumerics, allowing spaces/dashes between
+      // Examples: "1Z9999999999999999", "1Z 999 999 99 9999 9999", "1Z G01 00E 04 2439 8682"
+      const pattern = /1Z(?:[\s-]*[A-Z0-9O]){16}/gi;
+      const matches = text.match(pattern) || [];
+      
+      for (const raw of matches) {
+        const normalized = raw
+          .replace(/[\s-]/g, '')  // Remove spaces and dashes
+          .toUpperCase()
+          .replace(/O/g, '0');    // OCR fix: O → 0
+        
+        // Only keep valid 18-character tracking numbers
+        if (normalized.length === 18 && normalized.startsWith('1Z')) {
+          trackingNumbers.push(normalized);
+        }
+      }
+    }
 
     function updateProgress(current, total) {
       const percent = Math.round((current / total) * 100);
