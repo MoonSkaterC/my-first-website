@@ -11,15 +11,17 @@ def extract_ups_tracking_numbers(pdf_path):
     tracking_numbers = []
     
     try:
-        # Try to import pytesseract for OCR
+        # Try to import OCR dependencies
         try:
             import pytesseract
-            from PIL import Image
+            from pdf2image import convert_from_path
             ocr_available = True
             print("✓ OCR available (will read scanned PDFs)\n")
-        except ImportError:
+        except ImportError as e:
             ocr_available = False
-            print("⚠ OCR not available (install: pip install pytesseract pillow)\n")
+            print("⚠ OCR not available")
+            print(f"  Missing: {e}")
+            print("  Install: pip install pytesseract pdf2image pillow\n")
         
         with pdfplumber.open(pdf_path) as pdf:
             print(f"Total pages: {len(pdf.pages)}")
@@ -37,23 +39,40 @@ def extract_ups_tracking_numbers(pdf_path):
                 
                 print(f"Page {actual_page_number}:")
                 
-                # If no text extracted, try OCR
+                # If no text extracted or very little text, try OCR
                 if not text or len(text.strip()) < 10:
                     if ocr_available:
                         print("  No text found - trying OCR...")
                         try:
-                            # Convert page to image and OCR it
-                            img = page.to_image(resolution=300)
-                            pil_img = img.original
-                            text = pytesseract.image_to_string(pil_img)
-                            print(f"  OCR extracted {len(text)} characters")
+                            # Convert PDF page to image using pdf2image
+                            images = convert_from_path(
+                                pdf_path, 
+                                first_page=actual_page_number,
+                                last_page=actual_page_number,
+                                dpi=300
+                            )
+                            
+                            if images:
+                                # OCR the image
+                                text = pytesseract.image_to_string(
+                                    images[0],
+                                    config='--psm 6'  # Assume uniform block of text
+                                )
+                                print(f"  OCR extracted {len(text)} characters")
+                            else:
+                                print("  Could not convert page to image")
+                                text = ""
                         except Exception as e:
                             print(f"  OCR failed: {e}")
                             text = ""
                     else:
-                        print("  No text found (PDF may be scanned - install pytesseract for OCR)")
-                        print("  Run: pip install pytesseract pillow")
-                        print("  Also install Tesseract: https://github.com/tesseract-ocr/tesseract")
+                        print("  No text found (PDF is scanned)")
+                        print("  Install OCR support:")
+                        print("    pip install pytesseract pdf2image pillow")
+                        print("  Also install Tesseract OCR:")
+                        print("    Windows: https://github.com/UB-Mannheim/tesseract/wiki")
+                        print("    Mac: brew install tesseract")
+                        print("    Linux: sudo apt-get install tesseract-ocr")
                         continue
                 
                 if not text:
@@ -61,37 +80,41 @@ def extract_ups_tracking_numbers(pdf_path):
                     continue
                 
                 # Show a sample of extracted text
-                print(f"  Text sample: {text[:200]}...")
+                sample = text[:200].replace('\n', ' ')
+                print(f"  Text sample: {sample}...")
                 
-                # Find ALL occurrences of 1Z followed by letters/numbers
+                # Find ALL occurrences of UPS tracking numbers
                 found_in_page = []
                 
-                # Split into words and look for anything starting with 1Z
-                words = text.split()
-                for i, word in enumerate(words):
-                    if word.upper().startswith('1Z'):
-                        # Get this word and next few words (up to 30 characters total)
-                        potential_tracking = ' '.join(words[i:i+6])
-                        # Extract just alphanumeric and spaces after 1Z
-                        match = re.search(r'1Z[\sA-Z0-9]{16,}', potential_tracking, re.IGNORECASE)
-                        if match:
-                            found = match.group(0)
-                            # Clean it up
-                            found = ' '.join(found.split())  # normalize spaces
-                            found = found.upper()
-                            
-                            # CORRECT: Replace letter O with number 0
-                            # UPS tracking numbers use 0 (zero), not O (letter)
-                            found = found.replace('O', '0')
-                            
-                            if len(found.replace(' ', '')) >= 18:  # Must be at least 18 chars without spaces
-                                found_in_page.append(found)
-                                tracking_numbers.append(found)
+                # UPS tracking format: 1Z followed by 16 alphanumeric characters
+                # Total: 18 characters (1Z + 16 more)
+                # Pattern allows for spaces or no spaces
+                
+                # Remove all spaces for easier matching
+                text_no_spaces = text.replace(' ', '').replace('\n', '').replace('\r', '')
+                
+                # Find all matches of 1Z followed by 16 alphanumeric chars
+                pattern = r'1Z[A-Z0-9]{16}'
+                matches = re.findall(pattern, text_no_spaces, re.IGNORECASE)
+                
+                for match in matches:
+                    # Clean up the tracking number
+                    tracking = match.upper()
+                    
+                    # Replace letter O with number 0 (common OCR error)
+                    tracking = tracking.replace('O', '0')
+                    
+                    # Avoid duplicates
+                    if tracking not in found_in_page:
+                        found_in_page.append(tracking)
+                        tracking_numbers.append(tracking)
                 
                 if found_in_page:
                     print(f"  ✓ Found {len(found_in_page)} tracking number(s):")
                     for tn in found_in_page:
-                        print(f"    • {tn}")
+                        # Format with spaces for readability: 1Z XXX XXX XX XXXX XXXX X
+                        formatted = f"{tn[0:2]} {tn[2:5]} {tn[5:8]} {tn[8:10]} {tn[10:14]} {tn[14:18]}"
+                        print(f"    • {formatted} (Raw: {tn})")
                 else:
                     print("  No tracking numbers found")
                 print()
@@ -139,12 +162,16 @@ def main():
         print("\n❌ No tracking numbers found")
         print("\nTroubleshooting:")
         print("1. Make sure PDF has tracking numbers on EVEN pages (2, 4, 6...)")
-        print("2. If PDF is scanned, install OCR: pip install pytesseract pillow")
-        print("3. Install Tesseract: https://github.com/tesseract-ocr/tesseract")
+        print("2. Check if tracking numbers follow format: 1Z + 16 alphanumeric chars")
+        print("3. If PDF is scanned, make sure OCR is installed (see messages above)")
+        print("4. Try opening the PDF manually to verify it contains readable text")
         return
     
+    # Remove duplicates
+    tracking_numbers = list(dict.fromkeys(tracking_numbers))
+    
     print(f"\n{'='*60}")
-    print(f"TOTAL FOUND: {len(tracking_numbers)}")
+    print(f"TOTAL FOUND: {len(tracking_numbers)} unique tracking numbers")
     print(f"{'='*60}\n")
     
     # Save
@@ -152,6 +179,7 @@ def main():
     save_to_csv(tracking_numbers, output_path)
     
     print("✅ DONE!")
+    input("\nPress Enter to exit...")
 
 if __name__ == "__main__":
     main()
