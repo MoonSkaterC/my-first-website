@@ -1,36 +1,55 @@
 import os
+import subprocess
 import pdfplumber
 import csv
 import re
-import glob
-import sys
+
+# Configure Tesseract path on Windows if installed in the default location
+try:
+    import pytesseract
+    _tess_path = r"C:\Users\chris.garland\AppData\Local\Programs\Tesseract-OCR"
+    # If a directory was provided, append the executable name
+    if os.path.isdir(_tess_path):
+        _tess_path = os.path.join(_tess_path, "tesseract.exe")
+    pytesseract.pytesseract.tesseract_cmd = _tess_path
+except Exception:
+    pass
 
 def extract_ups_tracking_numbers(pdf_path):
     """
     Extract UPS tracking numbers starting with 1Z from even pages only
-    Works with both text-based and scanned PDFs
+    Uses OCR for scanned PDFs
     """
     tracking_numbers = []
     
-    # Check for OCR availability
-    ocr_available = False
     try:
-        import pytesseract
-        from pdf2image import convert_from_path
-        ocr_available = True
-        print("✓ OCR available (can read scanned PDFs)\n")
-    except ImportError as e:
-        print("⚠ OCR not available - can only read text-based PDFs")
-        print(f"  To enable OCR: pip install pytesseract pdf2image pillow\n")
-    
-    try:
+        # Try to import pytesseract for OCR
+        try:
+            import pytesseract
+            from PIL import Image
+            ocr_available = True
+            # Print resolved Tesseract path/version for diagnostics
+            try:
+                resolved_cmd = getattr(pytesseract.pytesseract, 'tesseract_cmd', 'tesseract')
+                if not resolved_cmd:
+                    resolved_cmd = 'tesseract'
+                ver = subprocess.run([resolved_cmd, '--version'], capture_output=True, text=True, timeout=3)
+                if ver.returncode == 0 and ver.stdout:
+                    first_line = ver.stdout.splitlines()[0]
+                    print(f"✓ OCR available — using: {resolved_cmd} ({first_line})\n")
+                else:
+                    print("✓ OCR available (will read scanned PDFs)\n")
+            except Exception:
+                print("✓ OCR available (will read scanned PDFs)\n")
+        except ImportError:
+            ocr_available = False
+            print("⚠ OCR not available (install: pip install pytesseract pillow)\n")
+        
         with pdfplumber.open(pdf_path) as pdf:
-            total_pages = len(pdf.pages)
-            print(f"Processing: {os.path.basename(pdf_path)}")
-            print(f"Total pages: {total_pages}")
-            print("Scanning even pages only (2, 4, 6, ...)...\n")
+            print(f"Total pages: {len(pdf.pages)}")
+            print("Processing even pages only (2, 4, 6, ...)...\n")
             
-            for page_num in range(total_pages):
+            for page_num in range(len(pdf.pages)):
                 actual_page_number = page_num + 1
                 
                 # Only process EVEN pages
@@ -40,149 +59,123 @@ def extract_ups_tracking_numbers(pdf_path):
                 page = pdf.pages[page_num]
                 text = page.extract_text()
                 
-                print(f"Page {actual_page_number}:", end=" ")
+                print(f"Page {actual_page_number}:")
                 
                 # If no text extracted, try OCR
                 if not text or len(text.strip()) < 10:
                     if ocr_available:
-                        print("(scanned - using OCR)...", end=" ")
+                        print("  No text found - trying OCR...")
                         try:
-                            from pdf2image import convert_from_path
-                            import pytesseract
-                            
-                            images = convert_from_path(
-                                pdf_path, 
-                                first_page=actual_page_number,
-                                last_page=actual_page_number,
-                                dpi=300
-                            )
-                            
-                            if images:
-                                text = pytesseract.image_to_string(
-                                    images[0],
-                                    config='--psm 6'
-                                )
-                            else:
-                                text = ""
+                            # Convert page to image and OCR it
+                            img = page.to_image(resolution=300)
+                            pil_img = img.original
+                            text = pytesseract.image_to_string(pil_img)
+                            print(f"  OCR extracted {len(text)} characters")
                         except Exception as e:
-                            print(f"OCR failed: {e}")
+                            print(f"  OCR failed: {e}")
                             text = ""
                     else:
-                        print("(scanned - OCR not available) - SKIPPED")
+                        print("  No text found (PDF may be scanned - install pytesseract for OCR)")
+                        print("  Run: pip install pytesseract pillow")
+                        print("  Also install Tesseract: https://github.com/tesseract-ocr/tesseract")
                         continue
                 
                 if not text:
-                    print("No text extracted")
+                    print("  No text available\n")
                     continue
                 
-                # Find tracking numbers
+                # Show a sample of extracted text
+                print(f"  Text sample: {text[:200]}...")
+                
+                # Find ALL occurrences across the whole text allowing spaces/dashes
                 found_in_page = []
-                text_no_spaces = text.replace(' ', '').replace('\n', '').replace('\r', '')
-                
-                # UPS pattern: 1Z + 16 alphanumeric characters
-                pattern = r'1Z[A-Z0-9]{16}'
-                matches = re.findall(pattern, text_no_spaces, re.IGNORECASE)
-                
-                for match in matches:
-                    tracking = match.upper().replace('O', '0')  # Fix OCR errors
-                    
-                    if tracking not in found_in_page:
-                        found_in_page.append(tracking)
-                        tracking_numbers.append(tracking)
+                pattern = re.compile(r'1Z(?:[\s\-]?[A-Z0-9]){16}', re.IGNORECASE)
+                matches = pattern.findall(text or "")
+
+                for raw in matches:
+                    candidate = raw.upper()
+                    # Normalize: remove non-alphanumerics, fix common OCR error O->0
+                    candidate = re.sub(r'[^A-Z0-9]', '', candidate)
+                    candidate = candidate.replace('O', '0')
+                    # Validate format: starts with 1Z and total length 18
+                    if not candidate.startswith('1Z'):
+                        continue
+                    if len(candidate) != 18:
+                        continue
+                    if candidate not in found_in_page:
+                        found_in_page.append(candidate)
+                        tracking_numbers.append(candidate)
                 
                 if found_in_page:
-                    print(f"✓ Found {len(found_in_page)} tracking number(s)")
+                    print(f"  ✓ Found {len(found_in_page)} tracking number(s):")
                     for tn in found_in_page:
-                        formatted = f"{tn[0:2]} {tn[2:5]} {tn[5:8]} {tn[8:10]} {tn[10:14]} {tn[14:18]}"
-                        print(f"    • {formatted}")
+                        print(f"    • {tn}")
                 else:
-                    print("No tracking numbers found")
+                    print("  No tracking numbers found")
+                print()
     
     except Exception as e:
-        print(f"\n❌ ERROR processing {pdf_path}: {e}")
+        print(f"ERROR: {e}")
         import traceback
         traceback.print_exc()
         return []
     
     return tracking_numbers
 
-def find_pdfs():
-    """Find all PDF files in current directory and pdfs/ subdirectory"""
-    pdf_files = []
-    
-    # Check current directory
-    pdf_files.extend(glob.glob("*.pdf"))
-    
-    # Check pdfs subdirectory
-    if os.path.exists("pdfs"):
-        pdf_files.extend(glob.glob("pdfs/*.pdf"))
-    
-    return pdf_files
-
 def save_to_csv(tracking_numbers, output_path):
     """Save tracking numbers to CSV"""
     with open(output_path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow(['Tracking Number', 'Formatted'])
+        writer.writerow(['Tracking Number'])
         for tn in tracking_numbers:
-            formatted = f"{tn[0:2]} {tn[2:5]} {tn[5:8]} {tn[8:10]} {tn[10:14]} {tn[14:18]}"
-            writer.writerow([tn, formatted])
-    
-    print(f"\n✓ Saved {len(tracking_numbers)} tracking numbers to: {output_path}")
+            writer.writerow([tn])
+    print(f"✓ Saved {len(tracking_numbers)} tracking numbers to: {output_path}\n")
 
 def main():
-    print("="*60)
-    print("UPS Tracking Number Extractor (GitHub Compatible)")
-    print("="*60 + "\n")
+    # Find desktop
+    desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+    if not os.path.exists(desktop):
+        desktop = os.path.join(os.path.expanduser("~"), "OneDrive", "Desktop")
     
-    # Find PDFs
-    pdf_files = find_pdfs()
+    # Find PDF
+    pdf_path = os.path.join(desktop, "UPS.10.10.pdf")
     
-    if not pdf_files:
-        print("❌ No PDF files found!")
-        print("\nPlace PDF files in:")
-        print("  • Root directory of the repository, OR")
-        print("  • A 'pdfs' subdirectory")
-        print("\nExpected filename: UPSTracking.pdf (or any .pdf file)")
-        sys.exit(1)
+    if not os.path.exists(pdf_path):
+        print(f"ERROR: UPS.10.10.pdf not found at {desktop}")
+        print("\nEnter full path to PDF:")
+        pdf_path = input("> ").strip().strip('"')
+        if not os.path.exists(pdf_path):
+            print("File not found. Exiting.")
+            return
     
-    print(f"Found {len(pdf_files)} PDF file(s):")
-    for pdf in pdf_files:
-        print(f"  • {pdf}")
-    print()
+    print(f"Reading: {pdf_path}\n")
     
-    # Process all PDFs
-    all_tracking_numbers = []
+    # Extract
+    tracking_numbers = extract_ups_tracking_numbers(pdf_path)
     
-    for pdf_path in pdf_files:
-        print(f"\n{'─'*60}")
-        tracking_numbers = extract_ups_tracking_numbers(pdf_path)
-        all_tracking_numbers.extend(tracking_numbers)
-    
-    # Remove duplicates while preserving order
-    unique_tracking = list(dict.fromkeys(all_tracking_numbers))
-    
-    print(f"\n{'='*60}")
-    print(f"SUMMARY: {len(unique_tracking)} unique tracking numbers found")
-    print(f"{'='*60}")
-    
-    if not unique_tracking:
+    if not tracking_numbers:
         print("\n❌ No tracking numbers found")
         print("\nTroubleshooting:")
-        print("1. Verify tracking numbers are on EVEN pages (2, 4, 6...)")
-        print("2. Check format: 1Z + 16 alphanumeric characters")
-        print("3. For scanned PDFs, install OCR: pip install pytesseract pdf2image")
-        print("4. On GitHub Actions, OCR is automatically installed")
-        sys.exit(1)
+        print("1. Make sure PDF has tracking numbers on EVEN pages (2, 4, 6...)")
+        print("2. If PDF is scanned, install OCR: pip install pytesseract pillow")
+        print("3. Install Tesseract: https://github.com/tesseract-ocr/tesseract")
+        return
     
-    # Save results
-    output_path = "ups_tracking_numbers.csv"
+    # Remove duplicates
+    unique_tracking = list(dict.fromkeys(tracking_numbers))
+    
+    print(f"\n{'='*60}")
+    print(f"TOTAL FOUND: {len(unique_tracking)} unique tracking numbers")
+    print(f"{'='*60}\n")
+    
+    # Save to requested location inside a 'Tracking numbers' folder
+    base_dir = r"C:\\Users\\chris.garland\\Mark 3 International\\Mark 3-OXF Warehouse - Documents\\Customers\\SHARE\\OUTBOUND\\10-OCT\\10.10"
+    tracking_dir = os.path.join(base_dir, "Tracking numbers")
+    os.makedirs(tracking_dir, exist_ok=True)
+    output_path = os.path.join(tracking_dir, "ups_tracking_numbers.csv")
     save_to_csv(unique_tracking, output_path)
     
-    print("\n✅ DONE!")
-    print(f"\nResults saved to: {output_path}")
-    
-    return 0
+    print("✅ DONE!")
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
